@@ -107,22 +107,16 @@ const Home: React.FC = () => {
                     </MathJax>
                     <IonInput id="ans" placeholder="Input your answer here"></IonInput>
                     <br />
-                    <IonCheckbox id="screensot">Submit my scratch with my answer</IonCheckbox>
+                    {/* <IonCheckbox id="screensot">Submit my scratch with my answer</IonCheckbox> */}
                     <br />
                     <IonButton onClick={async () => {
                       var node = document.getElementById('1');
                       htmlToImage.toBlob(node)
                         .then(async function (blob) {
-                          console.log(blob)
-                          const myfile = await openai.current.files.create({
-                            file: new File([blob],"screenshot.png"),
-                            purpose: "assistants",
-
-                          });
-                          console.log(myfile)
+        
                           const threadMessages = await openai.current.beta.threads.messages.create(
                             thread.current.id,
-                            { role: "user", content: "User said: " + document.getElementById("ans").value+". Talk about user's answer then move to next question.", "file_ids": [myfile.id] }
+                            { role: "user", content: "User said: " + document.getElementById("ans").value+". Talk about user's answer before move to next question." }
                           );
                           const run = await openai.current.beta.threads.runs.create(
                             thread.current.id,
