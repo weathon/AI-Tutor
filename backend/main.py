@@ -53,6 +53,7 @@ async def websocket_endpoint(websocket: WebSocket):
         msg += f"{i.choices[0].delta.content}"
         await websocket.send_text(f"{i.choices[0].delta.content}")
         await asyncio.sleep(0.05)
+    await websocket.close()
 
 @app.websocket("/check_ans")
 async def websocket_endpoint(websocket: WebSocket):
@@ -60,21 +61,29 @@ async def websocket_endpoint(websocket: WebSocket):
 
     data = await websocket.receive_text()
     question, ans, base64 = json.loads(data)
-
+    print([
+            {"role": "system", "content": "You are a helpful tutor, however, you SHOULD NOT solve problems for studnets. Instead, you shuold check if the answer is correct. You will get the original question, user's scratch paper, and user's response. Think about it and grade the user. You should explain the question, then solve it, then check if user got it correct. You should NOT do ANY of the calculation yourself. Instead, just give equations, and just check if user's expression is the same or equivalent. If user's answer is correct, add GREAT at the end, if partically correct, SAY GOOD, if wrong, say BAD! If your output has equations, put them into dollar signs ($equ here$)." 
+            },
+            {"role":"user","content":"Question: "+question},
+            {"role": "user", "content": 
+                ([{"type": "text", "text": "User said:"+ans}, {"type": "image_url", "image_url": {"url": base64 } }]) if base64!="" else ({"type": "text", "text": "User said:"+ans})
+            ,},
+        ])
     response = client.chat.completions.create(
         model="gpt-4-vision-preview",
         messages=[
-            {"role": "system", "content": "You are a helpful tutor, however, you SHOULD NOT solve problems for studnets. Instead, you shuold check if the answer is correct. You will get the original question, user's scratch paper, and user's response. Think about it and grade the user. You should explain the question, then solve it, then check if user got it correct. You should NOT do ANY of the calculation yourself. Instead, just give equations, and just check if user's expression is the same or equivalent. If user's answer is correct, add GREAT at the end, if partically correct, SAY GOOD, if wrong, say BAD!"
+            {"role": "system", "content": "You are a helpful tutor, however, you SHOULD NOT solve problems for studnets. Instead, you shuold check if the answer is correct. You will get the original question, user's scratch paper, and user's response. Think about it and grade the user. You should explain the question, then solve it, then check if user got it correct. You should NOT do ANY of the calculation yourself. Instead, just give equations, and just check if user's expression is the same or equivalent. If user's answer is correct, add GREAT at the end, if partically correct, SAY GOOD, if wrong, say BAD! If your output has equations, put them into dollar signs ($equ here$)." 
             },
-            {"role":"system","content":"Question: "+question},
+            {"role":"user","content":"Question: "+question},
             {"role": "user", "content": 
-                ([{"type": "text", "text": ans}, {"type": "image_url", "image_url": {"url": base64 } }]) if base64!="" else ({"type": "text", "text": ans})
+                ([{"type": "text", "text": "User said:"+ans}, {"type": "image_url", "image_url": {"url": base64 } }]) if base64!="" else ans
             ,},
         ],
         stream=True,
         max_tokens=3000
     )
-    msg = " \n \n \n"
+    msg = "### Solution \n"
+    await websocket.send_text(msg)
     for i in response:
         print(i.choices[0].delta.content, end="", flush=True)
         if i is None:
@@ -82,5 +91,6 @@ async def websocket_endpoint(websocket: WebSocket):
         msg += f"{i.choices[0].delta.content}"
         await websocket.send_text(f"{i.choices[0].delta.content}")
         await asyncio.sleep(0.05)
+    await websocket.close()
 
 
